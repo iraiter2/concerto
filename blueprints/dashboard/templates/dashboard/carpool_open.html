@@ -1,0 +1,180 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}Concerto{% endblock title %}
+{% block name %}Concerts{% endblock name %}
+
+{% block style %}
+<style>
+select {
+    text-align-last:center;
+}
+.pageheader-title {
+    align-self: center;
+    margin-bottom: 0px;
+}
+</style>
+{% endblock style %}
+
+{% block scripts %}
+{{super()}}
+
+<script>
+function getUrlVars() {
+    var vars = {};
+    var parts = window.location.href.replace(/[?&]+([^=&]+)=([^&]*)/gi, function(m,key,value) {
+        vars[key] = value;
+    });
+    return vars;
+}
+
+var carpool_id = getUrlVars().id;
+
+function sendMsg() {
+    var msg = $("#input-text").val();
+    $("#input-text").val("");
+    $.post("/carpool/msg", {
+        id: carpool_id,
+        content: msg
+    }, function(data) {
+        syncChat();
+    }).fail(function( jqXHR, textStatus, errorThrown ) {
+        toastr.error(jqXHR.responseText);
+    });
+}
+
+function syncChat() {
+    $.get("/carpool/get_msgs", {
+        id: carpool_id
+    }, function(data) {
+        data = JSON.parse(data);
+        var msgs = $("#msgs");
+        msgs.html("");
+        for (let i = 0; i < data.length; i++) {
+            let d = $("<div>");
+            d.text(data[i].displayname + ": " + data[i].content);
+            msgs.append(d);
+        }
+    }).fail(function( jqXHR, textStatus, errorThrown ) {
+        toastr.error(jqXHR.responseText);
+    })
+}
+
+function leave() {
+    $.post("/carpool/leave", {
+        id: carpool_id
+    }, function(data) {
+        window.location.href = "/carpool";
+    }).fail(function( jqXHR, textStatus, errorThrown ) {
+        toastr.error(jqXHR.responseText);
+    })
+}
+
+function update() {
+    $.post("/carpool/update", {
+        id: carpool_id,
+        car_description: $("#input-car-desc").val(),
+        arrival_time: 0
+    }, function(data) {
+        toastr.success("Updated carpool");
+    }).fail(function( jqXHR, textStatus, errorThrown ) {
+        toastr.error(jqXHR.responseText);
+    });
+}
+
+function init() {
+    toastr.options = {
+        "closeButton": false,
+        "debug": false,
+        "newestOnTop": false,
+        "progressBar": false,
+        "positionClass": "toast-bottom-center",
+        "preventDuplicates": false,
+        "onclick": null,
+        "showDuration": "300",
+        "hideDuration": "1000",
+        "timeOut": "3000",
+        "extendedTimeOut": "1000",
+        "showEasing": "swing",
+        "hideEasing": "linear",
+        "showMethod": "fadeIn",
+        "hideMethod": "fadeOut",
+        "escapeHtml": true
+    };
+
+    syncChat();
+    setInterval(syncChat, 1000);
+
+    $.get("/carpool/get", {
+        id: carpool_id
+    }, function(data) {
+        data = JSON.parse(data)[0];
+        $("#input-driver").val(data["displayname"]);
+        $("#input-car-desc").val(data["car_description"]);
+
+        if (current_user.id == data["driver_id"]) {
+            $("#input-car-desc").prop("disabled", false);
+            $("#updateBtn").show();
+        }
+    }).fail(function( jqXHR, textStatus, errorThrown ) {
+        toastr.error(jqXHR.responseText);
+    });
+}
+
+$(document).ready(init);
+</script>
+{% endblock scripts %}
+
+{% block content %}
+<div class="dashboard-wrapper">
+    <div class="dashboard-ecommerce">
+        <div class="container-fluid dashboard-content">
+            <div class="row">
+                <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-12">
+                    <div class="card thin-card-container" style="margin-bottom: 10px">
+                        <h5 class="card-header thin-card">Chat</h5>
+                        <div class="card-body thin-card">
+                            <form onsubmit="sendMsg(); return false;">
+                                <div class="form-group" style="margin-bottom: 0px">
+                                    <div id="msgs"></div>
+                                    <div class="input-group">
+                                        <input type="text" class="form-control" id="input-text">
+                                        &nbsp;
+                                        <span class="input-group-btn">
+                                            <button  type="submit" class="btn btn-primary btn-md">Send</button>
+                                        </span>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-12">
+                    <div class="card thin-card-container" style="margin-bottom: 10px">
+                        <h5 class="card-header thin-card">Options</h5>
+                        <div class="card-body thin-card">
+                            <form onsubmit="return false;">
+                                <div class="form-group" style="margin-bottom: 0px">
+                                    <label>Driver</label>
+                                    <input type="text" class="form-control" id="input-driver" disabled>
+                                    <br/>
+                                    <label>Car Description</label>
+                                    <input type="text" class="form-control" id="input-car-desc" disabled>
+                                    <br/>
+                                    <button class="btn btn-primary btn-md" id="updateBtn" onclick="update()" style="display:none">Update</button>
+                                    <button class="btn btn-secondary btn-md" onclick="leave()">Leave</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div id="feed"></div>
+            <!-- ============================================================== -->
+            <!-- end pageheader  -->
+            <!-- ============================================================== -->
+        </div>
+    </div>
+</div>
+{% endblock content %}

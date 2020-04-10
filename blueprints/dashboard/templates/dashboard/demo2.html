@@ -1,0 +1,108 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}Concerto{% endblock title %}
+{% block name %}Concerts{% endblock name %}
+
+{% block style %}
+<style>
+select {
+    text-align-last:center;
+}
+.pageheader-title {
+    align-self: center;
+    margin-bottom: 0px;
+}
+</style>
+{% endblock style %}
+
+{% block scripts %}
+{{super()}}
+
+<script>
+function showFeed(data) {
+    var feed = $("#feed");
+    feed.html("");
+    for (let i = 0; i < data.length; i++) {
+        let d = data[i];
+        var row = $("<div>", {class: "row"});
+        var col = $("<div>", {class: "col-xl-12 col-lg-12 col-md-12 col-sm-12 col-12"});
+        var card = $("<div>", {class: "card thin-card-container "});
+        var cardHeader = $("<div>", {class: "card-header thin-card"});
+        var cardBody = $("<div>", {class: "card-body thin-card"});
+
+        cardHeader.text(d.venue);
+        cardBody.text(d.artists);
+
+        card.append(cardHeader);
+        card.append(cardBody);
+        col.append(card);
+        row.append(col);
+        feed.append(row);
+    }
+}
+
+function init() {
+    toastr.options = {
+        "closeButton": false,
+        "debug": false,
+        "newestOnTop": false,
+        "progressBar": false,
+        "positionClass": "toast-bottom-center",
+        "preventDuplicates": false,
+        "onclick": null,
+        "showDuration": "300",
+        "hideDuration": "1000",
+        "timeOut": "3000",
+        "extendedTimeOut": "1000",
+        "showEasing": "swing",
+        "hideEasing": "linear",
+        "showMethod": "fadeIn",
+        "hideMethod": "fadeOut",
+        "escapeHtml": true
+    };
+
+    $.get("/carpool/demo2", {
+    }, function(data) {
+        showFeed(JSON.parse(data));
+    }).fail(function( jqXHR, textStatus, errorThrown ) {
+        toastr.error(jqXHR.responseText);
+    });
+}
+
+$(document).ready(init);
+</script>
+{% endblock scripts %}
+
+{% block content %}
+<div class="dashboard-wrapper">
+    <div class="dashboard-ecommerce">
+        <div class="container-fluid dashboard-content">
+            <h2>Most frequent artist(s) per venue</h4>
+            <h5 style="white-space: pre-wrap">
+                    SELECT venue, GROUP_CONCAT(artist) AS artists FROM (
+                    SELECT a.artist, c.venue, count(*) AS ct
+                    FROM concert_artists AS a
+                    JOIN concerts AS c
+                    ON a.concert = c.id
+                    GROUP BY a.artist, c.venue
+                    HAVING ct >= (SELECT MAX(ct2) FROM (
+                        SELECT count(*) AS ct2
+                        FROM concerts AS c2 
+                        JOIN concert_artists AS a2 
+                        ON c2.id=a2.concert 
+                        WHERE c2.venue = c.venue
+                        GROUP BY a2.artist
+                    ))
+                    )
+                    GROUP BY venue
+                    ORDER BY venue
+            </h5>
+            <div id="feed"></div>
+            <!-- ============================================================== -->
+            <!-- end pageheader  -->
+            <!-- ============================================================== -->
+            
+        </div>
+    </div>
+</div>
+{% endblock content %}

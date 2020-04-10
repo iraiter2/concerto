@@ -1,0 +1,62 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}Concerto - Settings{% endblock title %}
+{% block name %}Settings{% endblock name %}
+
+{% block scripts %}
+{{super()}}
+<script>
+
+function init() {
+    $("#displayname").val(current_user.displayname);
+}
+
+$(document).ready(init);
+</script>
+{% endblock scripts %}
+
+{% block content %}
+<div class="dashboard-wrapper">
+    <div class="dashboard-ecommerce">
+        <div class="container-fluid dashboard-content ">
+            <!-- ============================================================== -->
+            <!-- pageheader  -->
+            <!-- ============================================================== -->
+            <div class="row">
+                <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-12">
+                    <div class="page-header">
+                        <h2 class="pageheader-title">Settings</h2>
+                    </div>
+                </div>
+            </div>
+            <!-- ============================================================== -->
+            <!-- end pageheader  -->
+            <!-- ============================================================== -->
+            <div class="row">
+                <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-12">
+                    <div class="card">
+                        <h5 class="card-header">Update Account</h5>
+                        <div class="card-body">
+                            <form method="post">
+                                <div class="form-group">
+                                    <label>Display name</label>
+                                    <input class="form-control form-control-lg" id="displayname" type="text" placeholder="Displayname" name="displayname" autocomplete="off" autofocus>
+                                </div>
+                                <div class="form-group">
+                                    <label>Current password</label>
+                                    <input class="form-control form-control-lg" id="password" type="password" name="password" placeholder="Password" required="">
+                                </div>
+                                <div class="form-group">
+                                    <label>New password (optional)</label>
+                                    <input class="form-control form-control-lg" id="newpassword" type="password" name="newpassword" placeholder="New Password">
+                                </div>
+                                <button type="submit" class="btn btn-primary btn-lg btn-block">Update</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}
