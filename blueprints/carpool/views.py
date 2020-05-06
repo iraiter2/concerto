@@ -375,7 +375,7 @@ ORDER BY genre
 def carpool_demo2():
     q = \
 '''
-SELECT venue, string_agg(artist, ",") AS artists FROM (
+SELECT venue, array_to_string(array_agg(artist),', ')) AS artists FROM (
 SELECT a.artist, c.venue, count(*) AS ct
 FROM concert_artists AS a
 JOIN concerts AS c
