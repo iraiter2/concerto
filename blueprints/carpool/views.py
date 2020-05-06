@@ -278,6 +278,8 @@ def carpool_get_likes():
   with get_neo_db().session() as session:
       for record in session.run("MATCH (u:User {id: $id})-[:LIKES]->(c) RETURN c.id", id=current_user.id):
         likes.append(str(record["c.id"]))
+  if len(likes) == 0:
+    return json.dumps([])
   r = get_db().query("SELECT id, name FROM concerts WHERE id IN ({}) ORDER BY name".format(",".join(likes)))
   return json.dumps([x for x in r])
 
