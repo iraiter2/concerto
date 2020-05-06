@@ -191,7 +191,7 @@ def carpool_suggest():
             "WITH u, c, avg(similarity_i) AS similarity "
             "MATCH (b)-[:IN]->(c)-[:FOR]->(concert) "
             "RETURN c, similarity, min(distance(u.location, b.location)) AS dist, concert "
-            "ORDER BY similarity",
+            "ORDER BY similarity DESC",
             radius=float(request.args.get("radius")),
             user_id=current_user.id):
             r2 = get_db().query("SELECT name FROM concerts WHERE id=:id", id=r["concert"].get("id"))
@@ -355,16 +355,16 @@ def carpool_get_msgs():
 def carpool_demo1():
     q = \
 '''
-SELECT outer.genre,
+SELECT y.genre,
 (SELECT u.displayname FROM (SELECT p.driver_id AS id, count(*) AS ct
 FROM carpools AS p
 JOIN concerts AS c
 ON p.concert=c.id
-WHERE c.genre = outer.genre
+WHERE c.genre = y.genre
 GROUP BY p.driver_id
 ORDER BY ct
 LIMIT 1) AS I JOIN users AS u on u.id=I.id) AS top_driver
-FROM (SELECT DISTINCT genre FROM concerts) AS outer
+FROM (SELECT DISTINCT genre FROM concerts) AS y
 ORDER BY genre
 '''
     r = get_db().query(q)
@@ -388,8 +388,8 @@ HAVING ct >= (SELECT MAX(ct2) FROM (
     ON c2.id=a2.concert 
     WHERE c2.venue = c.venue
     GROUP BY a2.artist
-))
-)
+) AS x )
+) AS y
 GROUP BY venue
 ORDER BY venue
 '''
