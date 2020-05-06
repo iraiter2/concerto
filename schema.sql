@@ -1,24 +1,39 @@
 BEGIN TRANSACTION;
 CREATE TABLE IF NOT EXISTS "songs" (
-	"id"	INTEGER,
+	"id"	SERIAL PRIMARY KEY,
 	"artist"	TEXT,
 	"genre"	TEXT,
 	"year"	INTEGER,
 	"album"	TEXT,
-	"name"	TEXT,
-	PRIMARY KEY("id" AUTOINCREMENT)
+	"name"	TEXT
 );
 CREATE TABLE IF NOT EXISTS "concerts" (
-	"id"	INTEGER,
+	"id"	SERIAL PRIMARY KEY,
 	"genre"	TEXT,
 	"time"	INTEGER,
 	"name"	TEXT,
 	"location"	TEXT,
-	"venue"	TEXT,
-	PRIMARY KEY("id" AUTOINCREMENT)
+	"venue"	TEXT
+);
+CREATE TABLE IF NOT EXISTS "users" (
+	"id"	SERIAL PRIMARY KEY,
+	"username"	TEXT NOT NULL UNIQUE,
+	"password"	TEXT NOT NULL,
+	"salt"	TEXT NOT NULL,
+	"displayname"	TEXT NOT NULL,
+	"permissions"	INTEGER NOT NULL DEFAULT 0,
+	"profile_description"	TEXT
 );
 CREATE TABLE IF NOT EXISTS "concert_artists" (
 	"artist"	TEXT,
+	"concert"	INTEGER,
+	FOREIGN KEY("concert") REFERENCES "concerts"("id") ON DELETE CASCADE
+);
+CREATE TABLE IF NOT EXISTS "carpools" (
+	"id"	SERIAL PRIMARY KEY,
+	"arrival_time"	TEXT,
+	"driver_id"	INTEGER,
+	"car_description"	TEXT,
 	"concert"	INTEGER,
 	FOREIGN KEY("concert") REFERENCES "concerts"("id") ON DELETE CASCADE
 );
@@ -34,24 +49,5 @@ CREATE TABLE IF NOT EXISTS "carpool_members" (
 	"member_id"	INTEGER,
 	FOREIGN KEY("member_id") REFERENCES "users"("id") ON DELETE CASCADE,
 	FOREIGN KEY("carpool_id") REFERENCES "carpools"("id") ON DELETE CASCADE
-);
-CREATE TABLE IF NOT EXISTS "carpools" (
-	"id"	INTEGER,
-	"arrival_time"	TEXT,
-	"driver_id"	INTEGER,
-	"car_description"	TEXT,
-	"concert"	INTEGER,
-	FOREIGN KEY("concert") REFERENCES "concerts"("id") ON DELETE CASCADE,
-	PRIMARY KEY("id" AUTOINCREMENT)
-);
-CREATE TABLE IF NOT EXISTS "users" (
-	"id"	INTEGER,
-	"username"	TEXT NOT NULL UNIQUE,
-	"password"	TEXT NOT NULL,
-	"salt"	TEXT NOT NULL,
-	"displayname"	TEXT NOT NULL,
-	"permissions"	INTEGER NOT NULL DEFAULT 0,
-	"profile_description"	TEXT,
-	PRIMARY KEY("id" AUTOINCREMENT)
 );
 COMMIT;

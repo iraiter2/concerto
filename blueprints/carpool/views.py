@@ -91,7 +91,7 @@ def carpool_create():
     try:
         get_db().query("INSERT INTO carpools (arrival_time, driver_id, car_description, concert) VALUES (:a, :b, :c, :d)", 
             a=request.form['arrival_time'], b=current_user.id, c=request.form['car_description'], d=request.form['concert'])
-        car_id = get_db().query("SELECT last_insert_rowid() AS o").next()["o"]
+        car_id = get_db().query("SELECT MAX(id) FROM carpools").next()["MAX(id)"]
         get_db().query("INSERT INTO carpool_members (carpool_id, member_id) VALUES (:carpool_id, :member_id)", **{
             "carpool_id": car_id,
             "member_id": current_user.id
