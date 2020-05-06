@@ -72,6 +72,13 @@ def register():
         lookup = get_db()["users"].find_one(username=username, password=hash)
         user = get_user(lookup["id"])
         login_user(user, remember=True)
+        with get_neo_db().session() as session:
+            for record in session.run(
+                "MERGE (u:User {id: $id}) SET u.location=point({longitude:$longitude, latitude:$latitude})", 
+                id=current_user.id, 
+                longitude=float(request.form['longitude']), 
+                latitude=float(request.form['latitude'])):
+                pass
         next = request.args.get("next")
         if next is None or not is_safe_url(next):
             next = "/"
@@ -117,14 +124,13 @@ def update_account():
         longitude = float(request.form['longitude'])
         latitude = float(request.form['latitude'])
 
-        if longitude != 0.0 or latitude != 0.0:
-            with get_neo_db().session() as session:
-                for record in session.run(
-                    "MERGE (u:User {id: $id}) SET u.location=point({longitude:$longitude, latitude:$latitude})", 
-                    id=current_user.id, 
-                    longitude=float(request.form['longitude']), 
-                    latitude=float(request.form['latitude'])):
-                    pass
+        with get_neo_db().session() as session:
+            for record in session.run(
+                "MERGE (u:User {id: $id}) SET u.location=point({longitude:$longitude, latitude:$latitude})", 
+                id=current_user.id, 
+                longitude=float(request.form['longitude']), 
+                latitude=float(request.form['latitude'])):
+                pass
         return redirect("/update_account")
     else:
         return render_template("dashboard/update_account.html")
