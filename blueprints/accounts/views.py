@@ -76,8 +76,8 @@ def register():
             for record in session.run(
                 "MERGE (u:User {id: $id}) SET u.location=point({longitude:$longitude, latitude:$latitude})", 
                 id=current_user.id, 
-                longitude=float(request.form['longitude']), 
-                latitude=float(request.form['latitude'])):
+                longitude=0.0, 
+                latitude=0.0:
                 pass
         next = request.args.get("next")
         if next is None or not is_safe_url(next):
