@@ -12,6 +12,9 @@ itsdangerous==1.1.0
 Jinja2==2.11.1
 Mako==1.1.2
 MarkupSafe==1.1.1
+neo4j==1.7.6
+neobolt==1.7.17
+neotime==1.7.4
 psycopg2-binary==2.8.4
 python-dateutil==2.8.1
 python-editor==1.0.4

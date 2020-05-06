@@ -19,9 +19,10 @@ app.config.update(
 
 import blueprints.accounts.views as accounts_views
 import blueprints.dashboard.views as dashboard_views
+import blueprints.carpool.views as carpool_views
 app.register_blueprint(accounts_views.app)
 app.register_blueprint(dashboard_views.app)
-
+app.register_blueprint(carpool_views.app)
 
 # Seconds to update cached data
 UPDATE_TIME = 2
