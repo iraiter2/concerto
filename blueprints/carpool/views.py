@@ -14,8 +14,28 @@ import time
 
 app = Blueprint('carpool', __name__, template_folder='templates')
 
-@app.route("/load_concerts")
+
+@app.route("/reset")
 def reset():
+    get_db().begin()
+    try:
+        get_db()["concerts"].delete()
+        get_db()["concert_artists"].delete()
+        get_db()["carpools"].delete()
+        get_db()["carpool_members"].delete()
+        get_db()["chat_messages"].delete()
+        get_db().commit()
+    except Exception as e:
+        get_db().rollback()
+        return abort(401, "Fail")
+
+    with get_neo_db().session() as session:
+          for record in session.run("MATCH (a) DETACH DELETE a"):
+            pass
+    return "Success"
+
+@app.route("/load_concerts")
+def load_concerts():
     params = (
         ('classificationName', 'music'),
         ('dmaId', '249'),
