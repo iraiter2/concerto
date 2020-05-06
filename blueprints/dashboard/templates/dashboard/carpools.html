@@ -31,7 +31,7 @@ function showFeed(data) {
         var cardBody = $("<div>", {class: "card-body thin-card"});
 
         cardHeader.text(d.name);
-        cardBody.text(d.genre + ", " + d.venue + ", " + d.location);
+        cardBody.text(d.genre + ", " + d.venue);
 
         var openBtn = $('<button type="submit" class="btn btn-secondary btn-sm">Open</button>');
         openBtn.click(function() {

@@ -381,7 +381,7 @@ FROM concert_artists AS a
 JOIN concerts AS c
 ON a.concert = c.id
 GROUP BY a.artist, c.venue
-HAVING ct >= (SELECT MAX(ct2) FROM (
+HAVING count(*) >= (SELECT MAX(ct2) FROM (
     SELECT count(*) AS ct2
     FROM concerts AS c2 
     JOIN concert_artists AS a2 
