@@ -1,7 +1,7 @@
 from flask import Blueprint, Response, abort, redirect, render_template, request
 from flask_login import login_required, login_user, logout_user, current_user
 from urllib.parse import urlparse, urljoin
-from utils import get_db, get_user
+from utils import get_db, get_neo_db, get_user
 import hashlib
 import os
 import base64
@@ -14,7 +14,7 @@ import time
 
 app = Blueprint('carpool', __name__, template_folder='templates')
 
-@app.route("/reset")
+@app.route("/load_concerts")
 def reset():
     params = (
         ('classificationName', 'music'),
@@ -27,8 +27,8 @@ def reset():
 
     get_db().begin()
     try:
-        get_db()["concerts"].delete()
-        get_db()["concert_artists"].delete()
+        #get_db()["concerts"].delete()
+        #get_db()["concert_artists"].delete()
         data = response.json()
         for e in data["_embedded"]["events"]:
             name = e["name"]
@@ -37,7 +37,7 @@ def reset():
                 genre = e["classifications"][0]["genre"]["name"]
             venue_obj = e["_embedded"]["venues"][0]
             venue = venue_obj["name"]
-            location = str(venue_obj["location"])
+            location = venue_obj["location"]
             artists = [a["name"] for a in e["_embedded"]["attractions"]]
 
             ts = 0
@@ -48,11 +48,15 @@ def reset():
                 ts = (dt_with_tz - datetime(1970, 1, 1, tzinfo=pytz.utc)).total_seconds()
             except:
                 pass
+
+            lookup = get_db()["concerts"].find_one(name=name, time=ts)
+            if lookup is not None:
+                continue
             pk = get_db()["concerts"].insert({
                 "genre": genre,
                 "time": ts,
                 "name": name,
-                "location": location,
+                "location": json.dumps(location),
                 "venue": venue
             })
             for artist in artists:
@@ -60,8 +64,15 @@ def reset():
                     "artist": artist,
                     "concert": pk
                 })
+            with get_neo_db().session() as session:
+              for record in session.run(
+                "MERGE (c:Concert {id:$for_id, location:point({latitude:$lat, longitude:$lon})}) ",
+                lat=float(location["latitude"]),
+                lon=float(location["longitude"]),
+                for_id=pk):
+                pass
         get_db().commit()
-    except:
+    except Exception as e:
         get_db().rollback()
         return abort(401, "Fail")
     return "Success"
@@ -95,7 +106,23 @@ def carpool_create():
     except Exception as e:
         get_db().rollback()
         return abort(401, "Fail")
-    return "Success"
+    
+    with get_neo_db().session() as session:
+      for record in session.run(
+        "MERGE (p:Carpool {id:$car_id}) "
+        "MERGE (c:Concert {id:$for_id}) "
+        "MERGE (p)-[:FOR]->(c)",
+        car_id=car_id,
+        for_id=int(request.form['concert'])):
+        pass
+      for record in session.run(
+        "MATCH (p:Carpool {id:$car_id})-[:FOR]->(c), (u:User {id:$user_id}) "
+        "MERGE (u)-[:IN]->(p) "
+        "MERGE (u)-[:LIKES]->(c)",
+        car_id=car_id,
+        user_id=current_user.id):
+        pass
+    return json.dumps({"id": car_id})
 
 @app.route("/carpool/update", methods=["POST"])
 @login_required
@@ -126,6 +153,53 @@ def carpool_list():
         r = get_db().query("SELECT * FROM carpools WHERE concert=:concert", concert=request.args.get("id"))
     return json.dumps([x for x in r])
 
+@app.route("/carpool/suggest", methods=["GET"])
+@login_required
+def carpool_suggest():
+    if request.args.get("id") is None:
+        result = []
+        with get_neo_db().session() as session:
+          for r in session.run(
+            "MATCH (u:User {id:$user_id}), (b:User) "
+            "WHERE u <> b AND distance(b.location, u.location) < $radius "
+            "WITH u, b "
+            "MATCH (b)-[:IN]->(c) "
+            "WHERE NOT (u)-[:IN]->(c) "
+            "WITH DISTINCT u, c "
+            "MATCH (b)-[:IN]->(c), (b)-[:LIKES]->(s)<-[:LIKES]-(u) "
+            "WITH u, c, b, count(s) AS similarity_i "
+            "WITH u, c, avg(similarity_i) AS similarity "
+            "MATCH (b)-[:IN]->(c)-[:FOR]->(concert) "
+            "RETURN c, similarity, min(distance(u.location, b.location)) AS dist, concert "
+            "ORDER BY similarity",
+            radius=float(request.args.get("radius")),
+            user_id=current_user.id):
+            r2 = get_db().query("SELECT name FROM concerts WHERE id=:id", id=r["concert"].get("id"))
+            result.append({
+              "id": r["c"].get("id"),
+              "similarity": r["similarity"],
+              "name": r2.next()["name"],
+              "dist": r["dist"]
+            })
+          return json.dumps(result)
+    else:
+        result = []
+        with get_neo_db().session() as session:
+          for r in session.run(
+            "MATCH (u:User {id:$user_id}), (b)-[:IN]->(p)-[:FOR]->(c:Concert {id:$for_id}) "
+            "WITH p, min(distance(u.location, b.location)) AS dist "
+            "RETURN p, dist "
+            "ORDER BY dist",
+            for_id=int(request.args.get("id")),
+            user_id=current_user.id):
+            r2 = get_db().query("SELECT car_description FROM carpools WHERE id=:id", id=r["p"].get("id"))
+            result.append({
+              "id": r["p"].get("id"),
+              "dist": r["dist"],
+              "desc": r2.next()["car_description"]
+            })
+          return json.dumps(result)
+
 @app.route("/carpool/get", methods=["GET"])
 @login_required
 def carpool_get():
@@ -154,11 +228,33 @@ def carpool_join():
     except:
         get_db().rollback()
         return abort(401, "Fail")
+    with get_neo_db().session() as session:
+      for record in session.run(
+        "MATCH (p:Carpool {id:$car_id})-[:FOR]->(c), (u:User {id:$user_id}) "
+        "MERGE (u)-[:IN]->(p) "
+        "MERGE (u)-[:LIKES]->(c)",
+        car_id=int(request.form["id"]),
+        user_id=current_user.id):
+        pass
+    return "Success"
+
+@app.route("/carpool/like_concert", methods=["POST"])
+@login_required
+def carpool_like_concert():
+    lookup = get_db()["concerts"].find_one(id=request.form["id"])
+    if lookup is None:
+        return abort(401, "No such concert")
+
+    with get_neo_db().session() as session:
+      for record in session.run("MATCH (u:User {id: $id}), (c:Concert {id:$concert_id}) MERGE (u)-[:LIKES]->(c)", id=current_user.id, concert_id=int(request.form["id"])):
+        pass
+
     return "Success"
 
 @app.route("/carpool/leave", methods=["POST"])
 @login_required
 def carpool_leave():
+    delete_pool = False
     get_db().begin()
     try:
         get_db().query("DELETE FROM carpool_members WHERE member_id=:a AND carpool_id=:b", a=current_user.id, b=request.form["id"])
@@ -171,9 +267,10 @@ def carpool_leave():
         r = [x for x in get_db().query("SELECT * FROM carpool_members WHERE carpool_id=:id", id=request.form["id"])]
         if len(r) == 0:
             get_db().query("DELETE FROM carpools WHERE id=:a", a=request.form["id"])
+            delete_pool = True
         else:
             r = get_db().query("SELECT driver_id FROM carpools WHERE id=:id", id=request.form["id"])
-            driver_id = r.next()
+            driver_id = r.next()["driver_id"]
             r = get_db().query("SELECT member_id FROM carpool_members WHERE carpool_id=:id", id=request.form["id"])
             ids = [x["member_id"] for x in r]
             if driver_id not in ids:
@@ -187,6 +284,21 @@ def carpool_leave():
         print(str(e))
         get_db().rollback()
         return abort(401, "Fail")
+    if delete_pool:
+      with get_neo_db().session() as session:
+        for record in session.run(
+          "MATCH (p:Carpool {id:$car_id}) "
+          "DETACH DELETE p",
+          car_id=int(request.form["id"])):
+          pass
+    else:
+      with get_neo_db().session() as session:
+        for record in session.run(
+          "MATCH (p:Carpool {id:$car_id}), (u:User {id:$user_id}), (u)-[r:IN]->(p)"
+          "DELETE r",
+          car_id=int(request.form["id"]),
+          user_id=current_user.id):
+          pass
     return "Success"
 
 @app.route("/carpool/msg", methods=["POST"])
@@ -271,6 +383,14 @@ def carpool():
 @app.route("/carpool_open")
 def carpool_open():
     return render_template("dashboard/carpool_open.html")
+
+@app.route("/carpool_choice")
+def carpool_choice():
+    return render_template("dashboard/carpool_choice.html")
+
+@app.route("/suggested")
+def suggested():
+    return render_template("dashboard/suggested.html")
 
 @app.route("/demo1")
 def demo1():

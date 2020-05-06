@@ -1,0 +1,68 @@
+Fast Search
+
+CREATE INDEX ON :User(id)
+CREATE INDEX ON :User(location)
+
+
+# Dev queries
+
+Specific concert (lowest distance pools)
+
+MERGE (A:User {name:"A", location: point({longitude:1, latitude:2})})
+MERGE (B:User {name:"B", location: point({longitude:3, latitude:4})})
+MERGE (B2:User {name:"B2", location: point({longitude:1, latitude:2})})
+MERGE (C:Concert {name:"Concert", location: point({longitude:3, latitude:4})})
+MERGE (D:Concert {name:"Concert 2", location: point({longitude:3, latitude:4})})
+MERGE (E:Carpool {name:"CPA"})
+MERGE (E)-[:FOR]->(C)
+MERGE (F:Carpool {name:"CPB"})
+MERGE (F)-[:FOR]->(D)
+MERGE (A)-[:LIKES]->(C)
+MERGE (B)-[:LIKES]->(C)
+MERGE (A)-[:LIKES]->(D)
+MERGE (B)-[:LIKES]->(D)
+MERGE (B)-[:IN]->(E)
+MERGE (B2)-[:IN]->(E)
+WITH A
+MATCH (A)-[:LIKES]->(c)<-[:LIKES]-(b), (b)-[:IN]->(p)-[:FOR]->(c)
+WITH DISTINCT A, p
+MATCH (b)-[:IN]->(p)
+WITH A, p, avg(distance(A.location, b.location)) AS dist
+RETURN A, p, dist
+ORDER BY dist
+
+
+
+Suggested pools
+Need to carefully structure search to avoid long times
+So branch from people to carpools back to people
+
+filter - Search radius (for people in pool) (as long as one is in that radius)
+score - avg(shared concerts)
+
+MERGE (A:User {name:"A", location: point({longitude:1, latitude:2})})
+MERGE (B:User {name:"B", location: point({longitude:3, latitude:4})})
+MERGE (B2:User {name:"B2", location: point({longitude:1, latitude:2})})
+MERGE (C:Concert {name:"Concert", location: point({longitude:3, latitude:4})})
+MERGE (D:Concert {name:"Concert 2", location: point({longitude:3, latitude:4})})
+MERGE (E:Carpool {name:"CPA"})
+MERGE (E)-[:FOR]->(C)
+MERGE (F:Carpool {name:"CPB"})
+MERGE (F)-[:FOR]->(D)
+MERGE (A)-[:LIKES]->(C)
+MERGE (B)-[:LIKES]->(C)
+MERGE (A)-[:LIKES]->(D)
+MERGE (B)-[:LIKES]->(D)
+MERGE (B2)-[:LIKES]->(C)
+MERGE (B)-[:IN]->(E)
+MERGE (B2)-[:IN]->(E)
+WITH A
+MATCH (b:User)
+WHERE distance(b.location, A.location) < 1000000
+WITH A, b
+MATCH (b)-[:IN]->(c)
+WITH DISTINCT A, c
+MATCH (b)-[:IN]->(c), (b)-[:LIKES]->(s)<-[:LIKES]-(A)
+WITH A, c, b, count(s) AS similarity_i
+WITH A, c, avg(similarity_i) AS similarity
+RETURN A, c, similarity

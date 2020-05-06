@@ -5,6 +5,7 @@ import time
 import threading
 import json
 import os
+from neo4j import GraphDatabase
 
 lock = threading.RLock()
 # used in server.py
@@ -12,6 +13,7 @@ newsfeed_paths = ["/", "/index.html", "/newsfeed"]
 navigation = [
     {"name": "Concerts", "path": newsfeed_paths, "icon": "fa fa-fw fa-rss", "active": False},
     {"name": "Carpools", "path": ["/carpool"], "icon": "fa fa-fw fa-car", "active": False},
+    {"name": "Suggested", "path": ["/suggested"], "icon": "fa fa-fw fa-music", "active": False},
     {"name": "Demo 1", "path": ["/demo1"], "icon": "fa fa-fw fa-info", "active": False},
     {"name": "Demo 2", "path": ["/demo2"], "icon": "fa fa-fw fa-info", "active": False},
     {"name": "Settings", "path": ["/update_account"], "icon": "fa fa-fw fa-cog", "active": False},
@@ -19,6 +21,7 @@ navigation = [
     {"name": "Logout", "path": ["/logout"], "icon": "fa fa-fw fa-power-off", "active": False}
 ]
 db = None
+neo_db = None
 
 class User(UserMixin):
     def __init__(self, id, username, displayname, permissions):
@@ -41,6 +44,12 @@ def get_db():
             args["check_same_thread"] = False
         db = dataset.connect(os.environ.get("DATABASE_URL"), engine_kwargs={"poolclass": None, "connect_args":args})
     return db
+
+def get_neo_db():
+    global neo_db
+    if neo_db is None:
+        neo_db = GraphDatabase.driver(os.environ.get("GRAPHENEDB_BOLT_URL"), auth=(os.environ.get("GRAPHENEDB_BOLT_USER"), os.environ.get("GRAPHENEDB_BOLT_PASSWORD")))
+    return neo_db
 
 def get_user(userid):
     userid = int(userid)

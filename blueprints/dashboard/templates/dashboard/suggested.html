@@ -19,31 +19,6 @@ select {
 {{super()}}
 
 <script>
-function search() {
-    $.get("/search", {
-        artist: $("#input-text").val()
-    }, function(data) {
-        showFeed(JSON.parse(data));
-        toastr.success("Success");
-    }).fail(function( jqXHR, textStatus, errorThrown ) {
-        toastr.error(jqXHR.responseText);
-    });
-}
-
-function carpool_choice(concert_id) {
-    window.location.href = "/carpool_choice?id=" + concert_id;
-}
-
-function like(concert_id) {
-    $.post("/carpool/like_concert", {
-        id: concert_id
-    }, function(str) {
-        toastr.success("Liked");
-    }).fail(function( jqXHR, textStatus, errorThrown ) {
-        toastr.error(jqXHR.responseText);
-    });
-}
-
 function showFeed(data) {
     var feed = $("#feed");
     feed.html("");
@@ -51,26 +26,18 @@ function showFeed(data) {
         let d = data[i];
         var row = $("<div>", {class: "row"});
         var col = $("<div>", {class: "col-xl-12 col-lg-12 col-md-12 col-sm-12 col-12"});
-        var card = $("<div>", {class: "card thin-card-container"});
+        var card = $("<div>", {class: "card thin-card-container "});
         var cardHeader = $("<div>", {class: "card-header thin-card"});
         var cardBody = $("<div>", {class: "card-body thin-card"});
 
         cardHeader.text(d.name);
-        cardBody.text(d.genre + ", " + d.venue);
 
-        var carpoolBtn = $('<button type="submit" class="btn btn-secondary btn-sm">Carpool</button>');
-        carpoolBtn.click(function() {
-            carpool_choice(d.id);
+        var openBtn = $('<button type="submit" class="btn btn-secondary btn-sm">Join</button>');
+        openBtn.click(function() {
+            join_carpool(d.id);
         });
-        cardBody.prepend($('<div style="display:inline-block">&nbsp;&nbsp;</div>'));
-        cardBody.prepend(carpoolBtn);
-
-        var likeBtn = $('<button type="submit" class="btn btn-primary btn-sm">Like</button>');
-        likeBtn.click(function() {
-            like(d.id);
-        });
-        cardBody.prepend($('<div style="display:inline-block">&nbsp;&nbsp;</div>'));
-        cardBody.prepend(likeBtn);
+        cardBody.html("&nbsp;&nbsp;Similarity: " + d.similarity + " , Distance: " + d.dist.toFixed(1) + " km" + cardBody.html());
+        cardBody.prepend(openBtn);
 
         card.append(cardHeader);
         card.append(cardBody);
@@ -99,6 +66,29 @@ function init() {
         "hideMethod": "fadeOut",
         "escapeHtml": true
     };
+
+    search();
+}
+
+function search() {
+    $.get("/carpool/suggest", {
+        radius: parseInt($("#input-text").val())
+    }, function(data) {
+        showFeed(JSON.parse(data));
+    }).fail(function( jqXHR, textStatus, errorThrown ) {
+        toastr.error(jqXHR.responseText);
+    });
+}
+
+function join_carpool(carpool_id) {
+    $.post("/carpool/join", {
+        id: carpool_id
+    }, function(data) {
+        window.location.href = "/carpool_open?id=" + carpool_id;
+        toastr.success("Joined carpool");
+    }).fail(function( jqXHR, textStatus, errorThrown ) {
+        toastr.error(jqXHR.responseText);
+    });
 }
 
 $(document).ready(init);
@@ -112,12 +102,12 @@ $(document).ready(init);
             <div class="row">
                 <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-12">
                     <div class="card thin-card-container" style="margin-bottom: 10px">
-                        <h5 class="card-header thin-card">Concert Lookup</h5>
+                        <h5 class="card-header thin-card">Suggested</h5>
                         <div class="card-body thin-card">
                             <form onsubmit="search(); return false;">
                                 <div class="form-group" style="margin-bottom: 0px">
-                                    <label>Concert Name</label>
-                                    <input type="text" class="form-control" id="input-text">
+                                    <label>Distance (km)</label>
+                                    <input type="text" value=1000000 class="form-control" id="input-text">
                                     <div style="height:10px"></div>
                                     <button type="submit" class="btn btn-primary btn-lg btn-block">Search</button>
                                 </div>

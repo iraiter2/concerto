@@ -1,7 +1,7 @@
 from flask import Blueprint, Response, abort, redirect, render_template, request
 from flask_login import login_required, login_user, logout_user, current_user
 from urllib.parse import urlparse, urljoin
-from utils import get_db, get_user
+from utils import get_db, get_user, get_neo_db
 import hashlib
 import os
 import base64
@@ -113,9 +113,37 @@ def update_account():
             abort(401, "Registration error")
         user = get_user(current_user.id)
         login_user(user, remember=True)
+
+        longitude = float(request.form['longitude'])
+        latitude = float(request.form['latitude'])
+
+        if longitude != 0.0 or latitude != 0.0:
+            with get_neo_db().session() as session:
+                for record in session.run(
+                    "MERGE (u:User {id: $id}) SET u.location=point({longitude:$longitude, latitude:$latitude})", 
+                    id=current_user.id, 
+                    longitude=float(request.form['longitude']), 
+                    latitude=float(request.form['latitude'])):
+                    pass
         return redirect("/update_account")
     else:
         return render_template("dashboard/update_account.html")
+
+@app.route("/get_location")
+@login_required
+def get_location():
+    latitude = 0.0
+    longitude = 0.0
+    try:
+        with get_neo_db().session() as session:
+            for record in session.run(
+                "MATCH (u:User {id: $id}) RETURN u.location", 
+                id=current_user.id):
+                latitude = record["u.location"].latitude
+                longitude = record["u.location"].longitude
+    except:
+        pass
+    return json.dumps({"latitude": latitude, "longitude": longitude})
 
 @app.route("/logout")
 def logout():

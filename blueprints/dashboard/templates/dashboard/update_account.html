@@ -9,6 +9,13 @@
 
 function init() {
     $("#displayname").val(current_user.displayname);
+    $.get("/get_location", {}, function(str) {
+        let data = JSON.parse(str);
+        $("#latitude").val(data.latitude);
+        $("#longitude").val(data.longitude);
+    }).fail(function( jqXHR, textStatus, errorThrown ) {
+        toastr.error(jqXHR.responseText);
+    });
 }
 
 $(document).ready(init);
@@ -41,6 +48,14 @@ $(document).ready(init);
                                 <div class="form-group">
                                     <label>Display name</label>
                                     <input class="form-control form-control-lg" id="displayname" type="text" placeholder="Displayname" name="displayname" autocomplete="off" autofocus>
+                                </div>
+                                <div class="form-group">
+                                    <label>Latitude</label>
+                                    <input class="form-control form-control-lg" id="latitude" type="text" value="0.0" name="latitude" autocomplete="off" autofocus>
+                                </div>
+                                <div class="form-group">
+                                    <label>Longitude</label>
+                                    <input class="form-control form-control-lg" id="longitude" type="text" value="0.0" name="longitude" autocomplete="off" autofocus>
                                 </div>
                                 <div class="form-group">
                                     <label>Current password</label>
