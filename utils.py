@@ -14,8 +14,8 @@ navigation = [
     {"name": "Concerts", "path": newsfeed_paths, "icon": "fa fa-fw fa-rss", "active": False},
     {"name": "Carpools", "path": ["/carpool"], "icon": "fa fa-fw fa-car", "active": False},
     {"name": "Suggested", "path": ["/suggested"], "icon": "fa fa-fw fa-music", "active": False},
-    {"name": "Demo 1", "path": ["/demo1"], "icon": "fa fa-fw fa-info", "active": False},
-    {"name": "Demo 2", "path": ["/demo2"], "icon": "fa fa-fw fa-info", "active": False},
+    #{"name": "Demo 1", "path": ["/demo1"], "icon": "fa fa-fw fa-info", "active": False},
+    #{"name": "Demo 2", "path": ["/demo2"], "icon": "fa fa-fw fa-info", "active": False},
     {"name": "Settings", "path": ["/update_account"], "icon": "fa fa-fw fa-cog", "active": False},
     {"name": "Terms & Conditions", "path": ["javascript:window.open('/conditions', '_blank')"], "icon": "fa fa-fw fa-exclamation-triangle", "active": False},
     {"name": "Logout", "path": ["/logout"], "icon": "fa fa-fw fa-power-off", "active": False}
