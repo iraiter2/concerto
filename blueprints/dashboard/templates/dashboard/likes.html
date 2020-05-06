@@ -79,7 +79,7 @@ function dislike(concert_id) {
         id: concert_id
     }, function(str) {
         toastr.success("Removed");
-        window.location.href = "/likes";
+        init();
     }).fail(function( jqXHR, textStatus, errorThrown ) {
         toastr.error(jqXHR.responseText);
     });
