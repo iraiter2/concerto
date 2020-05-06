@@ -271,6 +271,24 @@ def carpool_like_concert():
 
     return "Success"
 
+@app.route("/carpool/get_likes")
+@login_required
+def carpool_get_likes():
+  likes = []
+  with get_neo_db().session() as session:
+      for record in session.run("MATCH (u:User {id: $id})-[:LIKES]->(c) RETURN c.id", id=current_user.id):
+        likes.append(str(record["c.id"]))
+  r = get_db().query("SELECT id, name FROM concerts WHERE id IN ({}) ORDER BY name".format(",".join(likes)))
+  return json.dumps([x for x in r])
+
+@app.route("/carpool/delete_like", methods=["POST"])
+@login_required
+def carpool_delete_like():
+  with get_neo_db().session() as session:
+      for record in session.run("MATCH (u:User {id: $id})-[r:LIKES]->(c:Concert {id: $concert_id}) DELETE r", id=current_user.id, concert_id=int(request.form["id"])):
+        pass
+  return "Success"
+
 @app.route("/carpool/leave", methods=["POST"])
 @login_required
 def carpool_leave():
@@ -407,6 +425,10 @@ def carpool_open():
 @app.route("/carpool_choice")
 def carpool_choice():
     return render_template("dashboard/carpool_choice.html")
+
+@app.route("/likes")
+def likes():
+    return render_template("dashboard/likes.html")
 
 @app.route("/suggested")
 def suggested():
